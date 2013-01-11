@@ -8,6 +8,8 @@ import Random
 l !! n = if n == 0 then head l else (tail l) !! (n-1)
 -- negative of a number (I don't like writing 0-x).
 neg x = 0-x
+-- too useful
+concatmap f l = concat (map f l)
 
 -- Colors (theme is solarized)
 base03  = rgb 0   43  54
@@ -32,9 +34,12 @@ mybase = rgba 108 113 196 (2/3)
 
 -- draw a point at position (x,y)
 point = filled mybase . rect 1 1
+colorpoint ((x,y),n) = filled (rgb n n n) . rect 1 1 $ (x,y)
+
 
 -- fill the background with color base3
-background w h = filled base3 ( rect w h (div w 2,div h 2))
+background w h = collage w h
+                    [filled base03 $ rect w h (div w 2,div h 2)]
 
 -- RANDOM PART
 nextint n =
@@ -112,27 +117,34 @@ rot phi = aff $ M (cos phi) (sin phi) 0.0 (neg (sin phi)) (cos phi) 0.0
 zoom z = aff $ M z 0 0 0 z 0
 
 -- The final transformation to transform the final result (zoom,rotate,translate)
-final = trans (480,300) . zoom 500 . rot (neg 0.747)
+final = trans (280,200) . zoom 300 . rot (neg 0.747)
 
-sierpset startpoint rands =
+sierpset startpoint rands tmpres =
   if rands == []
-    then []
+    then tmpres
     else
       let
         randval=(head rands) `rem` (length fs)
         newpoint = (fs !! randval) startpoint
-        savepoint = final newpoint
+        roundPoint (x,y) = (round x,round y)
+        savepoint = roundPoint ( final newpoint )
+        oldvalue = Dict.lookup savepoint tmpres
+        newvalue = 1 + (Maybe.fromMaybe 0 oldvalue)
+        newtmpres = Dict.insert savepoint newvalue tmpres
       in
-        savepoint:(sierpset newpoint (tail rands))
+        (sierpset newpoint (tail rands) newtmpres)
 
-concatmap f l = concat (map f l)
-sierpinsky = drop 30 $ concatmap (\s -> sierpset (0.0,0.0) (randlist s 4000)) [1..5]
+sierpinsky = sierpset (0.0,0.0) (randlist 0 1000000) Dict.empty
 
 scene (x,y) (w,h) =
   let
-    inpoint (x,y) = x>=0 && x<=w && y>=0 && y<=h
-  in collage w h $
-      background w h:
-        map point (filter inpoint sierpinsky)
+    inpoint ((x,y),_) = x>=0 && x<=w && y>=0 && y<=h
+  in layers
+        [ background w h
+        , collage w h $
+            map colorpoint $
+              filter inpoint $
+                Dict.toList $ sierpinsky
+        ]
 
-main = scene <~ Mouse.position ~ Window.dimensions
+main = scene (0,0) (500,500)
