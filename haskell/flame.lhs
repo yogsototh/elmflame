@@ -278,7 +278,7 @@ it seems natural to add the size of the view as parameter.
 
 > -- The final transformation to transform the final result (zoom,rotate,translate)
 > final :: Int -> Point -> Point
-> final width = trans (w/2,w/2) . zoom (w/10)  . rot (- pi)
+> final width = trans (w/2,w) . zoom (w/10)  . rot (- pi)
 >               where w = fromIntegral width
 
 And now the F_i functions.
